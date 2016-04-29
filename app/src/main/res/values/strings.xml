@@ -6,4 +6,6 @@
 
     <string name="facebook_app_id">240544472972473</string>
 
+    <string name="fb_login_protocol_scheme">fb240544472972473</string>
+
 </resources>

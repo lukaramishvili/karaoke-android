@@ -27,9 +27,12 @@ public class MainActivity extends Activity{
     private MyCameraSurfaceView myCameraSurfaceView;
     private MediaRecorder mediaRecorder;
 
-    Button myButton;
+    Button record_button;
+    Button flip_button;
     SurfaceHolder surfaceHolder;
     boolean recording;
+
+    Long recordingId = (long) 0;
 
     float nFreeSpaceAvailable = -1;
     static final String LOCATION_NA = "n/a";
@@ -100,11 +103,14 @@ public class MainActivity extends Activity{
         FrameLayout myCameraPreview = (FrameLayout)findViewById(R.id.videoview);
         myCameraPreview.addView(myCameraSurfaceView);
 
-        myButton = (Button)findViewById(R.id.mybutton);
-        myButton.setOnClickListener(myButtonOnClickListener);
+        record_button = (Button)findViewById(R.id.record_button);
+        record_button.setOnClickListener(recordButtonOnClickListener);
+        
+        flip_button = (Button)findViewById(R.id.record_button);
+        flip_button.setOnClickListener(flipButtonOnClickListener);
     }
 
-    Button.OnClickListener myButtonOnClickListener
+    Button.OnClickListener recordButtonOnClickListener
             = new Button.OnClickListener(){
 
         @Override
@@ -121,7 +127,7 @@ public class MainActivity extends Activity{
 
                 releaseMediaRecorder(); // release the MediaRecorder object
 
-                myButton.setText("START");
+                record_button.setText("START");
                 //Exit after saved
                 //finish();
 
@@ -141,9 +147,17 @@ public class MainActivity extends Activity{
 
                 mediaRecorder.start();
                 recording = true;
-                myButton.setText("STOP");
+                record_button.setText("STOP");
             }
         }};
+    
+    Button.OnClickListener flipButtonOnClickListener
+            = new Button.OnClickListener(){
+        @Override
+        public void onClick(View v) {
+            // TODO: 4/29/16 implement flip button
+        }
+    };
 
     private Camera getCameraInstance(){
         // TODO Auto-generated method stub
@@ -173,8 +187,8 @@ public class MainActivity extends Activity{
         //mediaRecorder.setVideoEncoder(MediaRecorder.VideoEncoder.H264);
 
         Date now = new Date();
-        recordingId = Long.valueOf(now.getTime()).toString();
-        mediaRecorder.setOutputFile(saveDir + "/" + recordingId + ".mp4");
+        recordingId = Long.valueOf(now.getTime());
+        mediaRecorder.setOutputFile(saveDir + "/" + recordingId.toString() + ".mp4");
         mediaRecorder.setMaxDuration(10*60*000); // Set max duration 10 min.
         mediaRecorder.setMaxFileSize(300*000*000); // Set max file size 300M
 
