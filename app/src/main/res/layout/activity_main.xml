@@ -8,7 +8,8 @@
     <RelativeLayout
         android:layout_width="match_parent"
         android:layout_height="67dp"
-        android:background="#262660">
+        android:background="#262660"
+        android:id="@+id/headerContainer">
 
         <com.facebook.login.widget.LoginButton
             android:id="@+id/login_button"
@@ -56,30 +57,64 @@
         android:orientation="vertical"
         android:layout_width="fill_parent"
         android:layout_height="fill_parent"
-        >
-        <FrameLayout
-            android:id="@+id/videoview"
-            android:layout_width="fill_parent"
-            android:layout_height="fill_parent">
+        android:id="@+id/mainContainer">
 
-            <Button
-                android:id="@+id/flip_button"
-                android:layout_width="wrap_content"
-                android:layout_height="50dp"
-                android:layout_alignParentBottom="true"
-                android:text="შემოტრიალება"
-                android:textSize="12dp"
-                android:layout_toLeftOf="@+id/record_button"
-                android:layout_toStartOf="@+id/record_button"
-                android:layout_gravity="left|bottom" />
-        </FrameLayout>
-        <Button
-            android:id="@+id/record_button"
+        <FrameLayout
+            android:id="@+id/cameraPreview"
             android:layout_width="100dp"
-            android:layout_height="50dp"
-            android:layout_centerHorizontal="true"
+            android:layout_height="100dp"
+            android:layout_alignParentTop="true"
+            android:layout_alignParentLeft="false"
+            android:layout_alignParentStart="false"
+            android:layout_alignParentEnd="false"
+            android:layout_alignParentRight="true"
+            android:layout_alignParentBottom="false">
+
+        </FrameLayout>
+
+        <ge.mygpi.karaoke.CustomVideoView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:id="@+id/lyricsVideo"
+            android:layout_centerInParent="true" />
+
+        <ImageButton
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:id="@+id/flip_button"
             android:layout_alignParentBottom="true"
-            android:text="ჩაწერა"
-            android:textSize="12dp"/>
+            android:layout_alignParentLeft="true"
+            android:layout_alignParentStart="false"
+            android:src="@drawable/btn_flip_camera"
+            android:layout_alignTop="@+id/upload_button"
+            android:layout_toStartOf="@+id/record_button"
+            android:scaleType="fitCenter"
+            android:layout_toLeftOf="@+id/record_button"
+            android:background="#00FFFFFF" />
+
+        <ImageButton
+            android:layout_width="100dp"
+            android:layout_height="100dp"
+            android:id="@+id/upload_button"
+            android:src="@drawable/btn_upload_video"
+            android:scaleType="fitCenter"
+            android:layout_alignParentBottom="true"
+            android:layout_alignParentRight="true"
+            android:layout_alignParentEnd="true"
+            android:layout_toRightOf="@+id/record_button"
+            android:layout_toEndOf="@+id/record_button"
+            android:background="#00FFFFFF" />
+
+        <ImageButton
+            android:layout_width="100dp"
+            android:layout_height="100dp"
+            android:id="@+id/record_button"
+            android:src="@drawable/btn_record_video"
+            android:scaleType="fitXY"
+            android:layout_alignParentBottom="true"
+            android:layout_centerHorizontal="true"
+            android:background="#00FFFFFF" />
+
     </RelativeLayout>
+
 </LinearLayout>

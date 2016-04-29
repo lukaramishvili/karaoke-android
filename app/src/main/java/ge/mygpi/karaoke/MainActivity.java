@@ -1,13 +1,7 @@
 package ge.mygpi.karaoke;
 
-import java.io.DataOutput;
-import java.io.DataOutputStream;
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.IOException;
-import java.net.HttpURLConnection;
-import java.net.MalformedURLException;
-import java.net.URL;
 import java.util.Date;
 
 import android.app.Activity;
@@ -15,21 +9,24 @@ import android.app.ProgressDialog;
 import android.content.Context;
 import android.hardware.Camera;
 import android.media.CamcorderProfile;
+import android.media.MediaPlayer;
 import android.media.MediaRecorder;
+import android.net.Uri;
 import android.os.Bundle;
 import android.os.Environment;
 import android.os.FileObserver;
 import android.os.StatFs;
-import android.util.Log;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
 import android.view.View;
 import android.widget.Button;
 import android.widget.FrameLayout;
+import android.widget.ImageButton;
+import android.widget.MediaController;
 import android.widget.Toast;
-import com.facebook.FacebookSdk;
+import android.widget.VideoView;
 
-import javax.net.ssl.HttpsURLConnection;
+import com.facebook.FacebookSdk;
 
 public class MainActivity extends Activity{
     //doc: http://bit.ly/1QEum1E
@@ -42,10 +39,14 @@ public class MainActivity extends Activity{
 
     public ProgressDialog uploadProgress;
 
-    Button record_button;
-    Button flip_button;
+    ImageButton record_button;
+    ImageButton upload_button;
+    ImageButton flip_button;
     SurfaceHolder surfaceHolder;
     boolean recording;
+
+    CustomVideoView lyricsVideo;
+    boolean fVideoLoaded = false;
 
     Long recordingId = (long) 0;
 
@@ -92,7 +93,7 @@ public class MainActivity extends Activity{
         }
 
         myCameraSurfaceView = new MyCameraSurfaceView(this, myCamera);
-        FrameLayout myCameraPreview = (FrameLayout) findViewById(R.id.videoview);
+        FrameLayout myCameraPreview = (FrameLayout) findViewById(R.id.cameraPreview);
         myCameraPreview.addView(myCameraSurfaceView);
     }
 
@@ -109,25 +110,32 @@ public class MainActivity extends Activity{
             notifyNotEnoughFreeSpace();
         }
 
-        /*File mydir = saveDir;
-        File[] files = mydir.listFiles();
-        String msg="";
-        int c = 0;
-        for(int i = 0; i < files.length; i++){
-            msg+=(files[i].getName() + files[i].getPath());c++;
-        }
-        toast(c+msg);*/
-
         recording = false;
 
         setContentView(R.layout.activity_main);
 
+        //start setup video
+        lyricsVideo = (CustomVideoView) findViewById(R.id.lyricsVideo);
+        lyricsVideo.setMediaController(new MediaController(this));
+        lyricsVideo.requestFocus();
+        lyricsVideo.setOnPreparedListener(new MediaPlayer.OnPreparedListener() {
+            @Override
+            public void onPrepared(MediaPlayer mp) {
+                fVideoLoaded = true;
+            }
+        });
+        lyricsVideo.setVideoURI(Uri.parse("https://beluxhome.com/recordvideo/source.mp4"));
+        //end setup video
+
         prepareCamera();
 
-        record_button = (Button)findViewById(R.id.record_button);
+        record_button = (ImageButton)findViewById(R.id.record_button);
         record_button.setOnClickListener(recordButtonOnClickListener);
-        
-        flip_button = (Button)findViewById(R.id.flip_button);
+
+        upload_button = (ImageButton)findViewById(R.id.upload_button);
+        upload_button.setOnClickListener(uploadButtonOnClickListener);
+
+        flip_button = (ImageButton)findViewById(R.id.flip_button);
         flip_button.setOnClickListener(flipButtonOnClickListener);
 
         onCreateCalled = true;
@@ -174,8 +182,11 @@ public class MainActivity extends Activity{
                 mediaRecorder.stop();  // stop the recording
                 releaseMediaRecorder(); // release the MediaRecorder object
                 //reset button text
-                record_button.setText("START");
+                //record_button.setText(R.string.start_record_label);
+                // TODO: 4/30/16 change image to btn_stop_recording
                 toast("Video recorded");
+
+                lyricsVideo.stopPlayback();
 
             }else {
 
@@ -183,23 +194,51 @@ public class MainActivity extends Activity{
                 releaseCamera();
 
                 if(!prepareMediaRecorder()){
-                    Toast.makeText(MainActivity.this,
-                            "Fail in prepareMediaRecorder()!\n - Ended -",
-                            Toast.LENGTH_LONG).show();
+                    toast("Fail in prepareMediaRecorder()!\n - Ended -");
                     finish();
                 }
 
                 mediaRecorder.start();
                 recording = true;
-                record_button.setText("STOP");
+                //record_button.setText(R.string.stop_record_label);
+                // TODO: 4/30/16 change image to btn_record_video
+
+                //play video simultaneously while recording
+                if(fVideoLoaded) {
+                    lyricsVideo.setPlayPauseListener(new CustomVideoView.PlayPauseListener() {
+
+                        @Override
+                        public void onPlay() {
+                            //play callback
+                            // TODO: 4/30/16 if the video loads too slow and doesn't match recording start,
+                            // TODO: 4/30/16 |->then move above recording start code here
+                        }
+
+                        @Override
+                        public void onPause() {
+                            //paused callback
+                        }
+                    });
+                    lyricsVideo.start();
+                } else {
+                    toast("Video not loaded yet");
+                }
             }
         }};
-    
+
     Button.OnClickListener flipButtonOnClickListener
             = new Button.OnClickListener(){
         @Override
         public void onClick(View v) {
             // TODO: 4/29/16 implement flip button
+        }
+    };
+
+    Button.OnClickListener uploadButtonOnClickListener
+            = new Button.OnClickListener(){
+        @Override
+        public void onClick(View v) {
+            // TODO: 4/29/16 implement direct (without recording, from gallery) upload video button
         }
     };
 
