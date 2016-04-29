@@ -25,9 +25,9 @@
             android:id="@+id/flip_button"
             android:layout_width="100dp"
             android:layout_height="50dp"
-            android:layout_centerHorizontal="true"
+            android:layout_centerHorizontal="false"
             android:layout_alignParentBottom="true"
-            android:text="REC"
+            android:text="Flip"
             android:textSize="12dp"/>
         <com.facebook.login.widget.LoginButton
             android:id="@+id/login_button"

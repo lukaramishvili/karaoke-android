@@ -1,17 +1,26 @@
 package ge.mygpi.karaoke;
 
+import java.io.DataOutput;
+import java.io.DataOutputStream;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
+import java.net.HttpURLConnection;
+import java.net.MalformedURLException;
+import java.net.URL;
 import java.util.Date;
 
 import android.app.Activity;
+import android.app.ProgressDialog;
 import android.content.Context;
 import android.hardware.Camera;
 import android.media.CamcorderProfile;
 import android.media.MediaRecorder;
 import android.os.Bundle;
 import android.os.Environment;
+import android.os.FileObserver;
 import android.os.StatFs;
+import android.util.Log;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
 import android.view.View;
@@ -20,12 +29,18 @@ import android.widget.FrameLayout;
 import android.widget.Toast;
 import com.facebook.FacebookSdk;
 
+import javax.net.ssl.HttpsURLConnection;
+
 public class MainActivity extends Activity{
     //doc: http://bit.ly/1QEum1E
+
+    private boolean onCreateCalled = false;
 
     private Camera myCamera;
     private MyCameraSurfaceView myCameraSurfaceView;
     private MediaRecorder mediaRecorder;
+
+    public ProgressDialog uploadProgress;
 
     Button record_button;
     Button flip_button;
@@ -57,7 +72,10 @@ public class MainActivity extends Activity{
             nFreeSpaceAvailable = bytesAvailable(saveDir);
         }
     }
-    private void toast(String message){
+    private String getVideoSavePath(Long id){
+        return saveDir + "/" + recordingId.toString() + ".mp4";
+    }
+    public void toast(String message){
         Toast.makeText(MainActivity.this, message, Toast.LENGTH_LONG).show();
     }
     private void notifyNotEnoughFreeSpace(){
@@ -65,6 +83,17 @@ public class MainActivity extends Activity{
     }
     private boolean fFreeSpaceIsEnough(){
         return nFreeSpaceAvailable > 50*000*000;
+    }
+
+    private void prepareCamera() {
+        myCamera = getCameraInstance();
+        if (myCamera == null) {
+            Toast.makeText(MainActivity.this, "Failed to get Camera", Toast.LENGTH_LONG).show();
+        }
+
+        myCameraSurfaceView = new MyCameraSurfaceView(this, myCamera);
+        FrameLayout myCameraPreview = (FrameLayout) findViewById(R.id.videoview);
+        myCameraPreview.addView(myCameraSurfaceView);
     }
 
     /** Called when the activity is first created. */
@@ -93,21 +122,15 @@ public class MainActivity extends Activity{
 
         setContentView(R.layout.activity_main);
 
-        //Get Camera for preview
-        myCamera = getCameraInstance();
-        if(myCamera == null){
-            Toast.makeText(MainActivity.this, "Failed to get Camera", Toast.LENGTH_LONG).show();
-        }
-
-        myCameraSurfaceView = new MyCameraSurfaceView(this, myCamera);
-        FrameLayout myCameraPreview = (FrameLayout)findViewById(R.id.videoview);
-        myCameraPreview.addView(myCameraSurfaceView);
+        prepareCamera();
 
         record_button = (Button)findViewById(R.id.record_button);
         record_button.setOnClickListener(recordButtonOnClickListener);
         
-        flip_button = (Button)findViewById(R.id.record_button);
+        flip_button = (Button)findViewById(R.id.flip_button);
         flip_button.setOnClickListener(flipButtonOnClickListener);
+
+        onCreateCalled = true;
     }
 
     Button.OnClickListener recordButtonOnClickListener
@@ -122,18 +145,39 @@ public class MainActivity extends Activity{
             }
 
             if(recording){
+                //first, set up monitoring file save; actual recorder stopping below
+
+                //wait for MediaRecorder finishing saving file
+                FileObserver fo = new FileObserver(saveDir.getAbsolutePath(), FileObserver.CLOSE_WRITE){
+                    @Override
+                    public void onEvent(int event, String path) {
+                        if(path.equals((new File(getVideoSavePath(recordingId))).getName())) {
+                            stopWatching();
+                            // TODO: 4/29/16 show video with play button in the middle
+                            // TODO: 4/29/16 also show two additional buttons: upload and retake
+                            // TODO: 4/29/16 only call the following upload code if user clicked upload
+                            //start upload code
+                            new Thread(new Runnable() {
+                                public void run() {
+                                    //this will also create and show the uploadProgress dialog
+                                    FileUploader.uploadVideo(getVideoSavePath(recordingId), MainActivity.this);
+                                }
+                            }).start();
+                            //end upload code
+                        }
+                    }
+                };
+                fo.startWatching();
+
+
                 // stop recording and release camera
                 mediaRecorder.stop();  // stop the recording
-
                 releaseMediaRecorder(); // release the MediaRecorder object
-
+                //reset button text
                 record_button.setText("START");
-                //Exit after saved
-                //finish();
+                toast("Video recorded");
 
-                // TODO: 4/29/16 upload file here
-                //
-            }else{
+            }else {
 
                 //Release Camera before MediaRecorder start
                 releaseCamera();
@@ -160,7 +204,6 @@ public class MainActivity extends Activity{
     };
 
     private Camera getCameraInstance(){
-        // TODO Auto-generated method stub
         Camera c = null;
         try {
             c = Camera.open(); // attempt to get a Camera instance
@@ -188,7 +231,7 @@ public class MainActivity extends Activity{
 
         Date now = new Date();
         recordingId = Long.valueOf(now.getTime());
-        mediaRecorder.setOutputFile(saveDir + "/" + recordingId.toString() + ".mp4");
+        mediaRecorder.setOutputFile(getVideoSavePath(recordingId));
         mediaRecorder.setMaxDuration(10*60*000); // Set max duration 10 min.
         mediaRecorder.setMaxFileSize(300*000*000); // Set max file size 300M
 
@@ -214,6 +257,16 @@ public class MainActivity extends Activity{
         super.onPause();
         releaseMediaRecorder();       // if you are using MediaRecorder, release it first
         releaseCamera();              // release the camera immediately on pause event
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        if(onCreateCalled) {
+            if (myCamera == null) {
+                prepareCamera();
+            }
+        }
     }
 
     private void releaseMediaRecorder(){
@@ -280,19 +333,18 @@ public class MainActivity extends Activity{
 
         @Override
         public void surfaceCreated(SurfaceHolder holder) {
-            // TODO Auto-generated method stub
             // The Surface has been created, now tell the camera where to draw the preview.
-            try {
-                mCamera.setPreviewDisplay(holder);
-                mCamera.startPreview();
+            //COMMENTED; caused NullException on resume
+            /*try {
+                //mCamera.setPreviewDisplay(holder);
+                //mCamera.startPreview();
             } catch (IOException e) {
-            }
+            }*/
         }
 
         @Override
         public void surfaceDestroyed(SurfaceHolder holder) {
-            // TODO Auto-generated method stub
-
+            // TODO should we destroy anything on surfaceDestroyed?
         }
     }
 }
