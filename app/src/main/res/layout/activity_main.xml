@@ -4,6 +4,54 @@
     android:layout_width="fill_parent"
     android:layout_height="fill_parent"
     >
+
+    <RelativeLayout
+        android:layout_width="match_parent"
+        android:layout_height="67dp"
+        android:background="#262660">
+
+        <com.facebook.login.widget.LoginButton
+            android:id="@+id/login_button"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center_horizontal"
+            android:layout_centerVertical="true"
+            android:layout_centerHorizontal="true" />
+
+        <ImageButton
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:id="@+id/imageButton"
+            android:layout_alignParentLeft="true"
+            android:layout_alignParentStart="true"
+            android:layout_alignParentBottom="true"
+            android:layout_toLeftOf="@+id/login_button"
+            android:layout_toStartOf="@+id/login_button"
+            android:layout_marginRight="36dp"
+            android:layout_marginEnd="36dp"
+            android:layout_alignParentTop="true"
+            android:background="#00FFFFFF"
+            android:src="@drawable/gpi_logo"
+            android:scaleType="fitCenter" />
+
+        <ImageButton
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:id="@+id/mygpi_logo"
+            android:layout_alignParentTop="true"
+            android:layout_alignParentRight="true"
+            android:layout_alignParentEnd="true"
+            android:src="@drawable/mygpi_logo"
+            android:layout_toEndOf="@+id/login_button"
+            android:background="#00ffffff"
+            android:layout_alignParentBottom="true"
+            android:scaleType="fitCenter"
+            android:layout_toRightOf="@+id/login_button"
+            android:layout_marginLeft="35dp"
+            android:layout_marginStart="35dp" />
+
+    </RelativeLayout>
+
     <RelativeLayout
         android:orientation="vertical"
         android:layout_width="fill_parent"
@@ -12,29 +60,26 @@
         <FrameLayout
             android:id="@+id/videoview"
             android:layout_width="fill_parent"
-            android:layout_height="fill_parent"/>
+            android:layout_height="fill_parent">
+
+            <Button
+                android:id="@+id/flip_button"
+                android:layout_width="wrap_content"
+                android:layout_height="50dp"
+                android:layout_alignParentBottom="true"
+                android:text="შემოტრიალება"
+                android:textSize="12dp"
+                android:layout_toLeftOf="@+id/record_button"
+                android:layout_toStartOf="@+id/record_button"
+                android:layout_gravity="left|bottom" />
+        </FrameLayout>
         <Button
             android:id="@+id/record_button"
             android:layout_width="100dp"
             android:layout_height="50dp"
             android:layout_centerHorizontal="true"
             android:layout_alignParentBottom="true"
-            android:text="REC"
+            android:text="ჩაწერა"
             android:textSize="12dp"/>
-        <Button
-            android:id="@+id/flip_button"
-            android:layout_width="100dp"
-            android:layout_height="50dp"
-            android:layout_centerHorizontal="false"
-            android:layout_alignParentBottom="true"
-            android:text="Flip"
-            android:textSize="12dp"/>
-        <com.facebook.login.widget.LoginButton
-            android:id="@+id/login_button"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_gravity="center_horizontal"
-            android:layout_marginTop="30dp"
-            android:layout_marginBottom="30dp" />
     </RelativeLayout>
 </LinearLayout>
