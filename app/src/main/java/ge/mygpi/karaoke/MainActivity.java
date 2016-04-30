@@ -3,6 +3,8 @@ package ge.mygpi.karaoke;
 import java.io.File;
 import java.io.IOException;
 import java.util.Date;
+import java.util.Iterator;
+import java.util.List;
 
 import android.app.Activity;
 import android.app.ProgressDialog;
@@ -20,6 +22,7 @@ import android.os.StatFs;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
 import android.view.View;
+import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.FrameLayout;
 import android.widget.ImageButton;
@@ -423,6 +426,38 @@ public class MainActivity extends Activity{
             }
 
             // make any resize, rotate or reformatting changes here
+
+
+            //start resize preview frame to the aspect ratio of video
+            int previewWidth = this.getWidth();
+            int previewHeight = this.getHeight();
+            // Get the width of the screen
+            int screenWidth = getWindowManager().getDefaultDisplay().getWidth();
+            int screenHeight = getWindowManager().getDefaultDisplay().getHeight();
+            float screenProportion = (float) screenWidth / (float) screenHeight;
+            Camera.Parameters camParams = mCamera.getParameters();
+            List<Camera.Size> sizes = camParams.getSupportedPreviewSizes();
+            Camera.Size maxSize = sizes.get(0);
+            for(Iterator<Camera.Size> i = sizes.iterator(); i.hasNext(); ) {
+                Camera.Size curSize = i.next();
+                if(curSize.width > maxSize.width){
+                    maxSize = curSize;
+                }
+            }
+            float videoProportion = (float) maxSize.width / (float) maxSize.height;
+            ViewGroup.LayoutParams lp = this.getLayoutParams();
+            /*if (videoProportion > screenProportion) {
+                lp.width = previewWidth;
+                lp.height = (int) ((float) previewWidth / videoProportion);
+            } else {
+                lp.width = (int) (videoProportion * (float) previewHeight);
+                lp.height = previewHeight;
+            }*/
+            //getSupportedPreviewSizes() reports 1920x1080 even when the video is 1080x1920;
+            //our app only has portrait mode, so only consider that situation
+            lp.height = (int) ((float) previewWidth * videoProportion);
+            this.setLayoutParams(lp);
+            //end resize preview frame to the aspect ratio of video
 
             // start preview with new settings
             try {
