@@ -18,7 +18,7 @@ import javax.net.ssl.HttpsURLConnection;
 public class FileUploader {
     //doc: http://bit.ly/1iCoElu
 
-    public static int uploadVideo(String sourcePath, final MainActivity activity) {
+    public static int uploadVideo(String sourcePath, final MainActivity activity, Runnable successCallback) {
 
         activity.runOnUiThread(new Runnable() {
             public void run() {
@@ -67,7 +67,7 @@ public class FileUploader {
                 FileInputStream fileInputStream = new FileInputStream(sourceFile);
                 URL url = new URL(upLoadServerUri);
 
-                // Open a HTTP  connection to  the URL
+                // Open a HTTP connection to the URL
                 conn = (HttpsURLConnection) url.openConnection();
                 conn.setDoInput(true); // Allow Inputs
                 conn.setDoOutput(true); // Allow Outputs
@@ -117,16 +117,7 @@ public class FileUploader {
 
                 if (serverResponseCode == 200) {
 
-                    activity.runOnUiThread(new Runnable() {
-                        public void run() {
-
-                            String msg = "File Upload Completed.\n\n See uploaded file here : \n\n"
-                                    + " https://karaoke.mygpi.ge/Video/" + uploadFileName;
-
-                            LinkedAlertDialog.create(activity.getApplicationContext(),
-                                    "ვიდეო ატვირთულია", "გამოსვლა", msg);
-                        }
-                    });
+                    activity.runOnUiThread(successCallback);
                 }
 
                 //close the streams //

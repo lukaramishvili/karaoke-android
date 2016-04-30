@@ -1,7 +1,12 @@
 package ge.mygpi.karaoke;
 
+import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.OutputStream;
+import java.net.MalformedURLException;
+import java.net.URL;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.Iterator;
@@ -11,6 +16,7 @@ import android.app.Activity;
 import android.app.ProgressDialog;
 import android.content.Context;
 import android.content.Intent;
+import android.database.Cursor;
 import android.hardware.Camera;
 import android.media.CamcorderProfile;
 import android.media.MediaPlayer;
@@ -20,6 +26,8 @@ import android.os.Bundle;
 import android.os.Environment;
 import android.os.FileObserver;
 import android.os.StatFs;
+import android.provider.MediaStore;
+import android.provider.Settings;
 import android.util.Log;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
@@ -44,6 +52,8 @@ import com.facebook.login.widget.LoginButton;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import javax.net.ssl.HttpsURLConnection;
+
 public class MainActivity extends Activity{
     //doc: http://bit.ly/1QEum1E
 
@@ -56,7 +66,12 @@ public class MainActivity extends Activity{
     private MyCameraSurfaceView myCameraSurfaceView;
     private MediaRecorder mediaRecorder;
 
+    int REQUEST_TAKE_GALLERY_VIDEO = 101;
+
     private LoginButton loginButton;
+
+    boolean loggedIn = false;
+    String UserId = "";
 
     public ProgressDialog uploadProgress;
 
@@ -124,10 +139,56 @@ public class MainActivity extends Activity{
         myCameraPreview.addView(myCameraSurfaceView);
     }
 
+    public String getPath(Uri uri) {
+        String[] filePathColumn = {MediaStore.Images.Media.DATA};
+        Cursor cursor = getContentResolver().query(uri, filePathColumn, null, null, null);
+
+        int columnindex = cursor.getColumnIndexOrThrow(MediaStore.Images.Media.DATA);
+        cursor.moveToFirst();
+        String file_path = cursor.getString(columnindex);
+        Log.e(getClass().getName(), "file_path" + file_path);
+        Uri fileUri = Uri.parse("file://" + file_path);
+        cursor.close();
+        return file_path;
+    }
+
+    private void uploadVideoFromPath(final String path){
+        new Thread(new Runnable() {
+            public void run() {
+                //this will also create and show the uploadProgress dialog
+                FileUploader.uploadVideo(path, MainActivity.this, new UploadCallback() {
+                    @Override
+                    public void run() {
+                        String msg = "File Upload Completed.\n\n See uploaded file here : \n\n"
+                                + " https://karaoke.mygpi.ge/Video/" + this.serverResponseText;
+
+                        LinkedAlertDialog.create(MainActivity.this.getApplicationContext(),
+                                "ვიდეო ატვირთულია", "გამოსვლა", msg);
+                    }
+                });
+            }
+        }).start();
+    }
+
     @Override
     protected void onActivityResult(final int requestCode, final int resultCode, final Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
-        callbackManager.onActivityResult(requestCode, resultCode, data);
+        if (requestCode == REQUEST_TAKE_GALLERY_VIDEO) {
+            if(resultCode == RESULT_OK) {
+                if (data.getData() != null) {
+                    Uri selectedImage = data.getData();
+                    String path = getPath(selectedImage);
+
+                    uploadVideoFromPath(path);
+                } else {
+                    Toast.makeText(getApplicationContext(), "Failed to select video", Toast.LENGTH_LONG).show();
+                }
+            } else {
+                //Video upload cancelled by the user
+            }
+        } else {
+            callbackManager.onActivityResult(requestCode, resultCode, data);
+        }
     }
 
     /** Called when the activity is first created. */
@@ -153,7 +214,7 @@ public class MainActivity extends Activity{
                 "public_profile", "email", "user_friends"));
         loginButton.registerCallback(callbackManager, new FacebookCallback<LoginResult>() {
             @Override
-            public void onSuccess(LoginResult loginResult) {
+            public void onSuccess(final LoginResult loginResult) {
                 //access token: loginResult.getAccessToken().getToken()
                 GraphRequest request = GraphRequest.newMeRequest(
                         loginResult.getAccessToken(),
@@ -162,15 +223,49 @@ public class MainActivity extends Activity{
                             public void onCompleted(JSONObject object, GraphResponse response) {
                                 try {
                                     // Application code
-                                    String id = object.getString("name");
-                                    String name = object.getString("name");
-                                    String email = object.getString("name");
-                                    String avatar = object.getJSONObject("picture")
+                                    final String id = object.getString("id");
+                                    final String name = object.getString("name");
+                                    final String email = object.getString("email");
+                                    final String avatar = object.getJSONObject("picture")
                                             .getJSONObject("data")
                                             .getString("url");
-                                    String cover = object.getString("cover");
-                                    toast(avatar);
-                                } catch (JSONException e){
+                                    final String cover = object.getJSONObject("cover").getString("source");
+                                    //start POST data to server
+                                    new Thread(new Runnable() {
+                                        public void run() {
+                                            try {
+                                                URL urlPostUserData = new URL("https://karaoke.mygpi.ge/Account/ExternalSignupDevice");
+                                                HttpsURLConnection connPostUserData = (HttpsURLConnection)urlPostUserData.openConnection();
+                                                connPostUserData.setRequestMethod("POST");
+                                                connPostUserData.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
+                                                connPostUserData.setDoOutput(true);
+                                                OutputStream wr = connPostUserData.getOutputStream();
+                                                String urlParameters = "id=" + id + "&name=" + name + "&email=" + email + "&avatar=" + avatar + "&cover=" + cover + "&accesstoken=" + loginResult.getAccessToken().getToken();
+                                                wr.write(urlParameters.getBytes("UTF-8"));
+                                                connPostUserData.connect();
+                                                BufferedReader br = new BufferedReader(new InputStreamReader(connPostUserData.getInputStream()));
+                                                String input;
+                                                String response = "";
+                                                while ((input = br.readLine()) != null) {
+                                                    response += input;
+                                                }
+                                                try {
+                                                    JSONObject jsonResponse = new JSONObject(response);
+                                                    MainActivity.this.loggedIn = true;
+                                                    MainActivity.this.UserId = jsonResponse.getString("UserId");
+                                                } catch(JSONException e){
+                                                    runOnUiThread(new Runnable(){public void run(){toast("When authorizing, server returned malformed json.");}});
+                                                }
+                                                br.close();
+                                            } catch (MalformedURLException e) {
+                                                runOnUiThread(new Runnable(){public void run(){toast("Malformed url exception.");}});
+                                            } catch (IOException e) {
+                                                runOnUiThread(new Runnable(){public void run(){toast("sending i/o error. try again.");}});
+                                            }
+                                        }
+                                    }).start();
+                                    //end POST data to server
+                                } catch (JSONException e) {
                                     toast("Incorrect answer from Facebook.");
                                 }
                             }
@@ -254,7 +349,7 @@ public class MainActivity extends Activity{
                             new Thread(new Runnable() {
                                 public void run() {
                                     //this will also create and show the uploadProgress dialog
-                                    FileUploader.uploadVideo(getVideoSavePath(recordingId), MainActivity.this);
+                                    uploadVideoFromPath(getVideoSavePath(recordingId));
                                 }
                             }).start();
                             //end upload code
@@ -327,7 +422,11 @@ public class MainActivity extends Activity{
             = new Button.OnClickListener(){
         @Override
         public void onClick(View v) {
-            // TODO: 4/29/16 implement direct (without recording, from gallery) upload video button
+            // TODO: 4/30/16 check login and then allow upload only if the user has no videos yet
+            Intent intent = new Intent();
+            intent.setType("video/*");
+            intent.setAction(Intent.ACTION_GET_CONTENT);
+            startActivityForResult(Intent.createChooser(intent,"Select Video"),REQUEST_TAKE_GALLERY_VIDEO);
         }
     };
 
