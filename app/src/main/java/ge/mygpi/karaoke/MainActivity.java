@@ -7,6 +7,7 @@ import java.util.Date;
 import android.app.Activity;
 import android.app.ProgressDialog;
 import android.content.Context;
+import android.content.Intent;
 import android.hardware.Camera;
 import android.media.CamcorderProfile;
 import android.media.MediaPlayer;
@@ -34,6 +35,7 @@ public class MainActivity extends Activity{
     private boolean onCreateCalled = false;
 
     private Camera myCamera;
+    private int camId = Camera.CameraInfo.CAMERA_FACING_BACK;
     private MyCameraSurfaceView myCameraSurfaceView;
     private MediaRecorder mediaRecorder;
 
@@ -42,6 +44,8 @@ public class MainActivity extends Activity{
     ImageButton record_button;
     ImageButton upload_button;
     ImageButton flip_button;
+    ImageButton gpi_logo;
+    ImageButton mygpi_logo;
     SurfaceHolder surfaceHolder;
     boolean recording;
 
@@ -79,6 +83,10 @@ public class MainActivity extends Activity{
     public void toast(String message){
         Toast.makeText(MainActivity.this, message, Toast.LENGTH_LONG).show();
     }
+    public void openUrl(String url) {
+        Intent browse = new Intent(Intent.ACTION_VIEW, Uri.parse(url));
+        startActivity(browse);
+    }
     private void notifyNotEnoughFreeSpace(){
         toast("Please free up space before recording");
     }
@@ -87,7 +95,7 @@ public class MainActivity extends Activity{
     }
 
     private void prepareCamera() {
-        myCamera = getCameraInstance();
+        myCamera = getCameraInstance(camId);
         if (myCamera == null) {
             Toast.makeText(MainActivity.this, "Failed to get Camera", Toast.LENGTH_LONG).show();
         }
@@ -137,6 +145,12 @@ public class MainActivity extends Activity{
 
         flip_button = (ImageButton)findViewById(R.id.flip_button);
         flip_button.setOnClickListener(flipButtonOnClickListener);
+
+        gpi_logo = (ImageButton)findViewById(R.id.gpi_logo);
+        gpi_logo.setOnClickListener(gpiLogoOnClickListener);
+
+        mygpi_logo = (ImageButton)findViewById(R.id.mygpi_logo);
+        mygpi_logo.setOnClickListener(mygpiLogoOnClickListener);
 
         onCreateCalled = true;
     }
@@ -188,7 +202,7 @@ public class MainActivity extends Activity{
 
                 lyricsVideo.stopPlayback();
 
-            }else {
+            } else {
 
                 //Release Camera before MediaRecorder start
                 releaseCamera();
@@ -230,7 +244,18 @@ public class MainActivity extends Activity{
             = new Button.OnClickListener(){
         @Override
         public void onClick(View v) {
-            // TODO: 4/29/16 implement flip button
+            //only allow switching when not recording
+            if(!recording) {
+                //only continue if we have multiple cameras
+                if (Camera.getNumberOfCameras() > 1) {
+                    if (camId == Camera.CameraInfo.CAMERA_FACING_BACK) {
+                        camId = Camera.CameraInfo.CAMERA_FACING_FRONT;
+                    } else {
+                        camId = Camera.CameraInfo.CAMERA_FACING_BACK;
+                    }
+                    resetCamera();
+                }
+            }
         }
     };
 
@@ -242,10 +267,26 @@ public class MainActivity extends Activity{
         }
     };
 
-    private Camera getCameraInstance(){
+    Button.OnClickListener gpiLogoOnClickListener
+            = new Button.OnClickListener(){
+        @Override
+        public void onClick(View v) {
+            openUrl("https://gpih.ge");
+        }
+    };
+
+    Button.OnClickListener mygpiLogoOnClickListener
+            = new Button.OnClickListener(){
+        @Override
+        public void onClick(View v) {
+            openUrl("https://mygpi.ge");
+        }
+    };
+
+    private Camera getCameraInstance(int cameraId){
         Camera c = null;
         try {
-            c = Camera.open(); // attempt to get a Camera instance
+            c = Camera.open(cameraId); // attempt to get a Camera instance
             c.setDisplayOrientation(90);
         }
         catch (Exception e){
@@ -254,8 +295,19 @@ public class MainActivity extends Activity{
         return c; // returns null if camera is unavailable
     }
 
+    private void resetCamera(){
+        if(myCamera != null) {
+            releaseCamera();
+        }
+        FrameLayout myCameraPreview = (FrameLayout) findViewById(R.id.cameraPreview);
+        myCameraPreview.removeView(myCameraSurfaceView);
+        myCameraSurfaceView = null;
+        prepareCamera();
+    }
+
     private boolean prepareMediaRecorder(){
-        myCamera = getCameraInstance();
+
+        myCamera = getCameraInstance(camId);
         mediaRecorder = new MediaRecorder();
 
         myCamera.unlock();
@@ -264,14 +316,18 @@ public class MainActivity extends Activity{
         mediaRecorder.setAudioSource(MediaRecorder.AudioSource.CAMCORDER);
         mediaRecorder.setVideoSource(MediaRecorder.VideoSource.CAMERA);
 
-        mediaRecorder.setProfile(CamcorderProfile.get(CamcorderProfile.QUALITY_HIGH));
+        if(camId == Camera.CameraInfo.CAMERA_FACING_BACK) {
+            mediaRecorder.setProfile(CamcorderProfile.get(CamcorderProfile.QUALITY_HIGH));
+        } else {
+            mediaRecorder.setProfile(CamcorderProfile.get(CamcorderProfile.QUALITY_LOW));
+        }
         //mediaRecorder.setOutputFormat(MediaRecorder.OutputFormat.MPEG_4);
         //mediaRecorder.setVideoEncoder(MediaRecorder.VideoEncoder.H264);
 
         Date now = new Date();
         recordingId = Long.valueOf(now.getTime());
         mediaRecorder.setOutputFile(getVideoSavePath(recordingId));
-        mediaRecorder.setMaxDuration(10*60*000); // Set max duration 10 min.
+        mediaRecorder.setMaxDuration(5*60*000); // Set max duration 10 min.
         mediaRecorder.setMaxFileSize(300*000*000); // Set max file size 300M
 
         mediaRecorder.setPreviewDisplay(myCameraSurfaceView.getHolder().getSurface());
@@ -319,6 +375,8 @@ public class MainActivity extends Activity{
 
     private void releaseCamera(){
         if (myCamera != null){
+            myCamera.stopPreview();
+            myCamera.setPreviewCallback(null);
             myCamera.release();        // release the camera for other applications
             myCamera = null;
         }
