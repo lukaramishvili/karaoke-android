@@ -165,11 +165,11 @@ public class MainActivity extends Activity{
                                     String id = object.getString("name");
                                     String name = object.getString("name");
                                     String email = object.getString("name");
-                                    String picture = object.getJSONObject("picture")
+                                    String avatar = object.getJSONObject("picture")
                                             .getJSONObject("data")
                                             .getString("url");
                                     String cover = object.getString("cover");
-                                    toast(picture);
+                                    toast(avatar);
                                 } catch (JSONException e){
                                     toast("Incorrect answer from Facebook.");
                                 }
