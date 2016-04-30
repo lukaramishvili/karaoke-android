@@ -124,7 +124,8 @@ public class MainActivity extends Activity{
 
         //start setup video
         lyricsVideo = (CustomVideoView) findViewById(R.id.lyricsVideo);
-        lyricsVideo.setMediaController(new MediaController(this));
+        //COMMENTED: don't add controls
+        //lyricsVideo.setMediaController(new MediaController(this));
         lyricsVideo.requestFocus();
         lyricsVideo.setOnPreparedListener(new MediaPlayer.OnPreparedListener() {
             @Override
@@ -246,15 +247,7 @@ public class MainActivity extends Activity{
         public void onClick(View v) {
             //only allow switching when not recording
             if(!recording) {
-                //only continue if we have multiple cameras
-                if (Camera.getNumberOfCameras() > 1) {
-                    if (camId == Camera.CameraInfo.CAMERA_FACING_BACK) {
-                        camId = Camera.CameraInfo.CAMERA_FACING_FRONT;
-                    } else {
-                        camId = Camera.CameraInfo.CAMERA_FACING_BACK;
-                    }
-                    resetCamera();
-                }
+                switchCamera();
             }
         }
     };
@@ -293,6 +286,18 @@ public class MainActivity extends Activity{
             // Camera is not available (in use or does not exist)
         }
         return c; // returns null if camera is unavailable
+    }
+
+    private void switchCamera(){
+        //only continue if we have multiple cameras
+        if (Camera.getNumberOfCameras() > 1) {
+            if (camId == Camera.CameraInfo.CAMERA_FACING_BACK) {
+                camId = Camera.CameraInfo.CAMERA_FACING_FRONT;
+            } else {
+                camId = Camera.CameraInfo.CAMERA_FACING_BACK;
+            }
+            resetCamera();
+        }
     }
 
     private void resetCamera(){
