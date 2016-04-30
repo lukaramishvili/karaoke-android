@@ -2,6 +2,7 @@ package ge.mygpi.karaoke;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.Date;
 import java.util.Iterator;
 import java.util.List;
@@ -19,6 +20,7 @@ import android.os.Bundle;
 import android.os.Environment;
 import android.os.FileObserver;
 import android.os.StatFs;
+import android.util.Log;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
 import android.view.View;
@@ -30,10 +32,22 @@ import android.widget.MediaController;
 import android.widget.Toast;
 import android.widget.VideoView;
 
+import com.facebook.CallbackManager;
+import com.facebook.FacebookCallback;
+import com.facebook.FacebookException;
 import com.facebook.FacebookSdk;
+import com.facebook.GraphRequest;
+import com.facebook.GraphResponse;
+import com.facebook.login.LoginResult;
+import com.facebook.login.widget.LoginButton;
+
+import org.json.JSONException;
+import org.json.JSONObject;
 
 public class MainActivity extends Activity{
     //doc: http://bit.ly/1QEum1E
+
+    CallbackManager callbackManager;
 
     private boolean onCreateCalled = false;
 
@@ -41,6 +55,8 @@ public class MainActivity extends Activity{
     private int camId = Camera.CameraInfo.CAMERA_FACING_BACK;
     private MyCameraSurfaceView myCameraSurfaceView;
     private MediaRecorder mediaRecorder;
+
+    private LoginButton loginButton;
 
     public ProgressDialog uploadProgress;
 
@@ -108,6 +124,12 @@ public class MainActivity extends Activity{
         myCameraPreview.addView(myCameraSurfaceView);
     }
 
+    @Override
+    protected void onActivityResult(final int requestCode, final int resultCode, final Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        callbackManager.onActivityResult(requestCode, resultCode, data);
+    }
+
     /** Called when the activity is first created. */
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -124,6 +146,52 @@ public class MainActivity extends Activity{
         recording = false;
 
         setContentView(R.layout.activity_main);
+
+        callbackManager = CallbackManager.Factory.create();
+        loginButton = (LoginButton)findViewById(R.id.login_button);
+        loginButton.setReadPermissions(Arrays.asList(
+                "public_profile", "email", "user_friends"));
+        loginButton.registerCallback(callbackManager, new FacebookCallback<LoginResult>() {
+            @Override
+            public void onSuccess(LoginResult loginResult) {
+                //access token: loginResult.getAccessToken().getToken()
+                GraphRequest request = GraphRequest.newMeRequest(
+                        loginResult.getAccessToken(),
+                        new GraphRequest.GraphJSONObjectCallback() {
+                            @Override
+                            public void onCompleted(JSONObject object, GraphResponse response) {
+                                try {
+                                    // Application code
+                                    String id = object.getString("name");
+                                    String name = object.getString("name");
+                                    String email = object.getString("name");
+                                    String picture = object.getJSONObject("picture")
+                                            .getJSONObject("data")
+                                            .getString("url");
+                                    String cover = object.getString("cover");
+                                    toast(picture);
+                                } catch (JSONException e){
+                                    toast("Incorrect answer from Facebook.");
+                                }
+                            }
+                        });
+                Bundle parameters = new Bundle();
+                parameters.putString("fields", "id,name,email,picture.type(large),cover");
+                request.setParameters(parameters);
+                request.executeAsync();
+            }
+
+            @Override
+            public void onCancel() {
+                toast("Facebook Login was cancelled.");
+            }
+
+            @Override
+            public void onError(FacebookException exception) {
+                toast("Facebook error: " + exception.getMessage());//also there's exception.getCause()
+            }
+        });
+
 
         //start setup video
         lyricsVideo = (CustomVideoView) findViewById(R.id.lyricsVideo);
