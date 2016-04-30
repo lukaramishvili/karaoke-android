@@ -428,24 +428,27 @@ public class MainActivity extends Activity{
             // make any resize, rotate or reformatting changes here
 
 
-            //start resize preview frame to the aspect ratio of video
-            int previewWidth = this.getWidth();
-            int previewHeight = this.getHeight();
-            // Get the width of the screen
-            int screenWidth = getWindowManager().getDefaultDisplay().getWidth();
-            int screenHeight = getWindowManager().getDefaultDisplay().getHeight();
-            float screenProportion = (float) screenWidth / (float) screenHeight;
-            Camera.Parameters camParams = mCamera.getParameters();
-            List<Camera.Size> sizes = camParams.getSupportedPreviewSizes();
-            Camera.Size maxSize = sizes.get(0);
-            for(Iterator<Camera.Size> i = sizes.iterator(); i.hasNext(); ) {
-                Camera.Size curSize = i.next();
-                if(curSize.width > maxSize.width){
-                    maxSize = curSize;
+
+            // start preview with new settings
+            try {
+                //start resize preview frame to the aspect ratio of video
+                int previewWidth = this.getWidth();
+                int previewHeight = this.getHeight();
+                // Get the width of the screen
+                int screenWidth = getWindowManager().getDefaultDisplay().getWidth();
+                int screenHeight = getWindowManager().getDefaultDisplay().getHeight();
+                float screenProportion = (float) screenWidth / (float) screenHeight;
+                Camera.Parameters camParams = mCamera.getParameters();
+                List<Camera.Size> sizes = camParams.getSupportedPreviewSizes();
+                Camera.Size maxSize = sizes.get(0);
+                for(Iterator<Camera.Size> i = sizes.iterator(); i.hasNext(); ) {
+                    Camera.Size curSize = i.next();
+                    if(curSize.width > maxSize.width){
+                        maxSize = curSize;
+                    }
                 }
-            }
-            float videoProportion = (float) maxSize.width / (float) maxSize.height;
-            ViewGroup.LayoutParams lp = this.getLayoutParams();
+                float videoProportion = (float) maxSize.width / (float) maxSize.height;
+                ViewGroup.LayoutParams lp = this.getLayoutParams();
             /*if (videoProportion > screenProportion) {
                 lp.width = previewWidth;
                 lp.height = (int) ((float) previewWidth / videoProportion);
@@ -453,14 +456,12 @@ public class MainActivity extends Activity{
                 lp.width = (int) (videoProportion * (float) previewHeight);
                 lp.height = previewHeight;
             }*/
-            //getSupportedPreviewSizes() reports 1920x1080 even when the video is 1080x1920;
-            //our app only has portrait mode, so only consider that situation
-            lp.height = (int) ((float) previewWidth * videoProportion);
-            this.setLayoutParams(lp);
-            //end resize preview frame to the aspect ratio of video
+                //getSupportedPreviewSizes() reports 1920x1080 even when the video is 1080x1920;
+                //our app only has portrait mode, so only consider that situation
+                lp.height = (int) ((float) previewWidth * videoProportion);
+                this.setLayoutParams(lp);
+                //end resize preview frame to the aspect ratio of video
 
-            // start preview with new settings
-            try {
                 mCamera.setPreviewDisplay(mHolder);
                 mCamera.startPreview();
 
