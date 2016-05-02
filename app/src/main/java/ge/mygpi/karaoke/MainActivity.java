@@ -191,6 +191,26 @@ public class MainActivity extends Activity{
         }
     }
 
+    public void initUIAndEvents(){
+
+        setContentView(R.layout.activity_main);
+
+        record_button = (ImageButton)findViewById(R.id.record_button);
+        record_button.setOnClickListener(recordButtonOnClickListener);
+
+        upload_button = (ImageButton)findViewById(R.id.upload_button);
+        upload_button.setOnClickListener(uploadButtonOnClickListener);
+
+        flip_button = (ImageButton)findViewById(R.id.flip_button);
+        flip_button.setOnClickListener(flipButtonOnClickListener);
+
+        gpi_logo = (ImageButton)findViewById(R.id.gpi_logo);
+        gpi_logo.setOnClickListener(gpiLogoOnClickListener);
+
+        mygpi_logo = (ImageButton)findViewById(R.id.mygpi_logo);
+        mygpi_logo.setOnClickListener(mygpiLogoOnClickListener);
+    }
+
     /** Called when the activity is first created. */
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -206,7 +226,7 @@ public class MainActivity extends Activity{
 
         recording = false;
 
-        setContentView(R.layout.activity_main);
+        initUIAndEvents();//contains setContentView and onClick handlers
 
         callbackManager = CallbackManager.Factory.create();
         loginButton = (LoginButton)findViewById(R.id.login_button);
@@ -303,21 +323,6 @@ public class MainActivity extends Activity{
         //end setup video
 
         prepareCamera();
-
-        record_button = (ImageButton)findViewById(R.id.record_button);
-        record_button.setOnClickListener(recordButtonOnClickListener);
-
-        upload_button = (ImageButton)findViewById(R.id.upload_button);
-        upload_button.setOnClickListener(uploadButtonOnClickListener);
-
-        flip_button = (ImageButton)findViewById(R.id.flip_button);
-        flip_button.setOnClickListener(flipButtonOnClickListener);
-
-        gpi_logo = (ImageButton)findViewById(R.id.gpi_logo);
-        gpi_logo.setOnClickListener(gpiLogoOnClickListener);
-
-        mygpi_logo = (ImageButton)findViewById(R.id.mygpi_logo);
-        mygpi_logo.setOnClickListener(mygpiLogoOnClickListener);
 
         onCreateCalled = true;
     }
@@ -536,6 +541,9 @@ public class MainActivity extends Activity{
         super.onResume();
         if(onCreateCalled) {
             if (myCamera == null) {
+                //after onResume, without re-calling setContentView, camera preview didn't work
+                //also onClick handlers were lost. the following method contains code for both
+                initUIAndEvents();
                 prepareCamera();
             }
         }
