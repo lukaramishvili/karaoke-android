@@ -9,6 +9,7 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.net.URLEncoder;
 
 import javax.net.ssl.HttpsURLConnection;
 
@@ -18,7 +19,7 @@ import javax.net.ssl.HttpsURLConnection;
 public class FileUploader {
     //doc: http://bit.ly/1iCoElu
 
-    public static int uploadVideo(String sourcePath, final MainActivity activity, Runnable successCallback) {
+    public static int uploadVideo(String UserId, String sourcePath, final MainActivity activity, Runnable successCallback) {
 
         activity.runOnUiThread(new Runnable() {
             public void run() {
@@ -27,7 +28,7 @@ public class FileUploader {
                         true);
             }
         });
-        String upLoadServerUri = "https://karaoke.mygpi.ge/UploadVideo";
+        String upLoadServerUri = "https://karaoke.mygpi.ge/Video/UploadVideoDevice";
 
         HttpsURLConnection conn = null;
         DataOutputStream dos = null;
@@ -76,12 +77,16 @@ public class FileUploader {
                 conn.setRequestProperty("Connection", "Keep-Alive");
                 conn.setRequestProperty("ENCTYPE", "multipart/form-data");
                 conn.setRequestProperty("Content-Type", "multipart/form-data;boundary=" + boundary);
-                conn.setRequestProperty("uploaded_file", fileName);
+                //send UserId as HTTP header instead of HTTP POST
+                conn.setRequestProperty("UserId", UserId);
+                conn.setRequestProperty("file", fileName);
 
                 dos = new DataOutputStream(conn.getOutputStream());
 
+                //dos.writeBytes((URLEncoder.encode("UserId", "UTF-8") + "=" + URLEncoder.encode(UserId, "UTF-8")).getBytes());
+
                 dos.writeBytes(twoHyphens + boundary + lineEnd);
-                dos.writeBytes("Content-Disposition: form-data; name=\"uploaded_file\";filename=\""
+                dos.writeBytes("Content-Disposition: form-data; name=\"file\";filename=\""
                         + fileName + "\"" + lineEnd);
 
                 dos.writeBytes(lineEnd);
@@ -96,12 +101,10 @@ public class FileUploader {
                 bytesRead = fileInputStream.read(buffer, 0, bufferSize);
 
                 while (bytesRead > 0) {
-
                     dos.write(buffer, 0, bufferSize);
                     bytesAvailable = fileInputStream.available();
                     bufferSize = Math.min(bytesAvailable, maxBufferSize);
                     bytesRead = fileInputStream.read(buffer, 0, bufferSize);
-
                 }
 
                 // send multipart form data necesssary after file data...

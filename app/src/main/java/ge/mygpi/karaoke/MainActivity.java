@@ -131,7 +131,7 @@ public class MainActivity extends Activity{
     private void prepareCamera() {
         myCamera = getCameraInstance(camId);
         if (myCamera == null) {
-            Toast.makeText(MainActivity.this, "Failed to get Camera", Toast.LENGTH_LONG).show();
+            toast("Failed to get Camera");
         }
 
         myCameraSurfaceView = new MyCameraSurfaceView(this, myCamera);
@@ -156,7 +156,7 @@ public class MainActivity extends Activity{
         new Thread(new Runnable() {
             public void run() {
                 //this will also create and show the uploadProgress dialog
-                FileUploader.uploadVideo(path, MainActivity.this, new UploadCallback() {
+                FileUploader.uploadVideo(UserId, path, MainActivity.this, new UploadCallback() {
                     @Override
                     public void run() {
                         String msg = "File Upload Completed.\n\n See uploaded file here : \n\n"
@@ -491,19 +491,21 @@ public class MainActivity extends Activity{
         mediaRecorder.setAudioSource(MediaRecorder.AudioSource.CAMCORDER);
         mediaRecorder.setVideoSource(MediaRecorder.VideoSource.CAMERA);
 
-        if(camId == Camera.CameraInfo.CAMERA_FACING_BACK) {
+        /*if(camId == Camera.CameraInfo.CAMERA_FACING_BACK) {
             mediaRecorder.setProfile(CamcorderProfile.get(CamcorderProfile.QUALITY_HIGH));
         } else {
             mediaRecorder.setProfile(CamcorderProfile.get(CamcorderProfile.QUALITY_LOW));
-        }
+        }*/
+        mediaRecorder.setProfile(CamcorderProfile.get(CamcorderProfile.QUALITY_480P));
+
         //mediaRecorder.setOutputFormat(MediaRecorder.OutputFormat.MPEG_4);
         //mediaRecorder.setVideoEncoder(MediaRecorder.VideoEncoder.H264);
 
         Date now = new Date();
         recordingId = Long.valueOf(now.getTime());
         mediaRecorder.setOutputFile(getVideoSavePath(recordingId));
-        mediaRecorder.setMaxDuration(5*60*000); // Set max duration 10 min.
-        mediaRecorder.setMaxFileSize(300*000*000); // Set max file size 300M
+        mediaRecorder.setMaxDuration(5*60*1000); // Set max duration 5 min.
+        mediaRecorder.setMaxFileSize(300*1000*1000); // Set max file size 300M
 
         mediaRecorder.setPreviewDisplay(myCameraSurfaceView.getHolder().getSurface());
         mediaRecorder.setOrientationHint(90);
