@@ -25,6 +25,7 @@ import android.net.Uri;
 import android.os.Bundle;
 import android.os.Environment;
 import android.os.FileObserver;
+import android.os.Handler;
 import android.os.StatFs;
 import android.provider.MediaStore;
 import android.util.Log;
@@ -60,6 +61,8 @@ import javax.net.ssl.HttpsURLConnection;
 
 public class MainActivity extends Activity{
     //doc: http://bit.ly/1QEum1E
+
+    private boolean confirmExit = false;
 
     private boolean onCreateCalled = false;
 
@@ -563,7 +566,7 @@ public class MainActivity extends Activity{
             public void hide() {
                 prevent hiding controls
             }*/
-            //retake video on back key
+            //retake video on back key (DOESN'T WORK)
             @Override
             public boolean dispatchKeyEvent(KeyEvent event) {
                 if(event.getKeyCode() == KeyEvent.KEYCODE_BACK) {
@@ -590,6 +593,7 @@ public class MainActivity extends Activity{
                         //paused callback
                     }
                 });
+                //the controls still hide when video finishes
                 previewControls.show(2000000000);
                 mp.start();
             }
@@ -700,6 +704,27 @@ public class MainActivity extends Activity{
                 //also onClick handlers were lost. the following method contains code for both
                 initUIAndEvents();
                 prepareCamera();
+            }
+        }
+    }
+
+    @Override
+    public void onBackPressed() {
+        RelativeLayout previewContainer = (RelativeLayout) findViewById(R.id.previewContainer);
+        if (previewContainer.getVisibility() == View.VISIBLE) {
+            retakeVideo();
+        } else {
+            if (confirmExit) {
+                finish(); // finish activity
+            } else {
+                toast("Press Back again to Exit.");
+                confirmExit = true;
+                new Handler().postDelayed(new Runnable() {
+                    @Override
+                    public void run() {
+                        confirmExit = false;
+                    }
+                }, 3 * 1000);
             }
         }
     }
