@@ -12,10 +12,12 @@ import java.util.Date;
 import java.util.Iterator;
 import java.util.List;
 
+import android.Manifest;
 import android.app.Activity;
 import android.app.ProgressDialog;
 import android.content.Context;
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.database.Cursor;
 import android.hardware.Camera;
 import android.media.CamcorderProfile;
@@ -28,6 +30,8 @@ import android.os.FileObserver;
 import android.os.Handler;
 import android.os.StatFs;
 import android.provider.MediaStore;
+import android.support.v4.app.ActivityCompat;
+import android.support.v4.content.ContextCompat;
 import android.util.Log;
 import android.view.KeyEvent;
 import android.view.SurfaceHolder;
@@ -66,12 +70,15 @@ public class MainActivity extends Activity{
 
     private boolean onCreateCalled = false;
 
+    private boolean fCameraPermissionBeingRequested = false;
+
     private Camera myCamera;
     private int camId = Camera.CameraInfo.CAMERA_FACING_BACK;
     private MyCameraSurfaceView myCameraSurfaceView;
     private MediaRecorder mediaRecorder;
 
     int REQUEST_TAKE_GALLERY_VIDEO = 101;
+    int REQUEST_CAMERA_ACCESS = 103;
 
     private LoginButton loginButton;
 
@@ -129,7 +136,7 @@ public class MainActivity extends Activity{
         return saveDir + "/" + recordingId.toString() + ".mp4";
     }
     public void toast(String message){
-        Toast.makeText(MainActivity.this, message, Toast.LENGTH_LONG).show();
+        Toast.makeText(MainActivity.this, message, Toast.LENGTH_SHORT).show();
     }
     public void openUrl(String url) {
         Intent browse = new Intent(Intent.ACTION_VIEW, Uri.parse(url));
@@ -145,7 +152,23 @@ public class MainActivity extends Activity{
     private void prepareCamera() {
         myCamera = getCameraInstance(camId);
         if (myCamera == null) {
-            toast("Failed to get Camera");
+
+            if(ContextCompat.checkSelfPermission(MainActivity.this, android.Manifest.permission.CAMERA)
+                    != PackageManager.PERMISSION_GRANTED){
+                if(ActivityCompat.shouldShowRequestPermissionRationale(MainActivity.this, android.Manifest.permission.CAMERA)){
+                    toast("Please allow camera access to record video.");
+                }
+                if(!fCameraPermissionBeingRequested) {
+                    fCameraPermissionBeingRequested = true;
+                    ActivityCompat.requestPermissions(MainActivity.this,
+                            new String[]{Manifest.permission.CAMERA},
+                            REQUEST_CAMERA_ACCESS);
+                }
+                return;//prepareCamera will be called in grant permissions callback, success section
+            } else {
+                toast("Failed to get Camera");//permission granted but still no camera
+            }
+
         }
 
         myCameraSurfaceView = new MyCameraSurfaceView(this, myCamera);
@@ -276,6 +299,26 @@ public class MainActivity extends Activity{
         } else {
             callbackManager.onActivityResult(requestCode, resultCode, data);
         }
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode,
+                                           String permissions[], int[] grantResults) {
+        if(requestCode == REQUEST_CAMERA_ACCESS) {
+            fCameraPermissionBeingRequested = false;
+            // If request is cancelled, the result arrays are empty.
+            if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                // permission was granted, yay! Do the
+                // contacts-related task you need to do.
+                prepareCamera();
+            } else {
+                // permission denied, boo! Disable the
+                // functionality that depends on this permission.
+                toast("You need to grant permission to camera to use this app.");
+            }
+        }
+        // other 'elseif' lines to check for other
+        // permissions this app might request
     }
 
     @Override
@@ -622,16 +665,14 @@ public class MainActivity extends Activity{
         return c; // returns null if camera is unavailable
     }
 
-    private void switchCamera(){
+    private void switchCamera() {
         //only continue if we have multiple cameras
-        if (Camera.getNumberOfCameras() > 1) {
-            if (camId == Camera.CameraInfo.CAMERA_FACING_BACK) {
-                camId = Camera.CameraInfo.CAMERA_FACING_FRONT;
-            } else {
-                camId = Camera.CameraInfo.CAMERA_FACING_BACK;
-            }
-            resetCamera();
+        int nextCameraId = camId + 1;
+        if (nextCameraId >= Camera.getNumberOfCameras()) {
+            nextCameraId = 0;
         }
+        camId = nextCameraId;
+        resetCamera();
     }
 
     private void resetCamera(){
@@ -702,6 +743,7 @@ public class MainActivity extends Activity{
             if (myCamera == null) {
                 //after onResume, without re-calling setContentView, camera preview didn't work
                 //also onClick handlers were lost. the following method contains code for both
+                //IMPORTANT: this code also gets called on app start
                 initUIAndEvents();
                 prepareCamera();
             }
