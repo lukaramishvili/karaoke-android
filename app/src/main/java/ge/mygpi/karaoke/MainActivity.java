@@ -559,10 +559,10 @@ public class MainActivity extends Activity{
         //start setup video
         previewVideo = (CustomVideoView) findViewById(R.id.previewVideo);
         final MediaController previewControls = new MediaController(this){
-            @Override
+            /*@Override
             public void hide() {
-                /* prevent hiding controls */
-            }
+                prevent hiding controls
+            }*/
             //retake video on back key
             @Override
             public boolean dispatchKeyEvent(KeyEvent event) {
@@ -601,6 +601,7 @@ public class MainActivity extends Activity{
     public void retakeVideo(){
         RelativeLayout mainContainer = (RelativeLayout)findViewById(R.id.mainContainer);
         RelativeLayout previewContainer = (RelativeLayout)findViewById(R.id.previewContainer);
+
         previewContainer.setVisibility(View.GONE);
         mainContainer.setVisibility(View.VISIBLE);
     }
