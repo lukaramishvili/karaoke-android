@@ -152,6 +152,10 @@ public class MainActivity extends Activity{
         return file_path;
     }
 
+    private void showLinkedDialog(String title, String cancelLabel, String message){
+        LinkedAlertDialog.create(MainActivity.this, title, cancelLabel, message).show();
+    }
+
     private void uploadVideoFromPath(final String path){
         new Thread(new Runnable() {
             public void run() {
@@ -159,11 +163,10 @@ public class MainActivity extends Activity{
                 FileUploader.uploadVideo(UserId, path, MainActivity.this, new UploadCallback() {
                     @Override
                     public void run() {
-                        String msg = "File Upload Completed.\n\n See uploaded file here : \n\n"
+                        String msg = "ვიდეო ატვირთულია.\n\n იხილეთ ატვირთული ვიდეო აქ: \n\n"
                                 + " https://karaoke.mygpi.ge/Video/" + this.serverResponseText;
 
-                        LinkedAlertDialog.create(MainActivity.this.getApplicationContext(),
-                                "ვიდეო ატვირთულია", "გამოსვლა", msg);
+                        showLinkedDialog("ვიდეო ატვირთულია", "გამოსვლა", msg);
                     }
                 });
             }
@@ -245,11 +248,15 @@ public class MainActivity extends Activity{
                                     // Application code
                                     final String id = object.getString("id");
                                     final String name = object.getString("name");
-                                    final String email = object.getString("email");
+                                    final String email = object.has("email")
+                                            ? object.getString("email")
+                                            : "no-email@example.com";
                                     final String avatar = object.getJSONObject("picture")
                                             .getJSONObject("data")
                                             .getString("url");
-                                    final String cover = object.getJSONObject("cover").getString("source");
+                                    final String cover = object.has("cover")
+                                            ?   object.getJSONObject("cover").getString("source")
+                                            : avatar;
                                     //start POST data to server
                                     new Thread(new Runnable() {
                                         public void run() {
@@ -287,6 +294,7 @@ public class MainActivity extends Activity{
                                     //end POST data to server
                                 } catch (JSONException e) {
                                     toast("Incorrect answer from Facebook.");
+                                    //showLinkedDialog("asd","asd","incor fb" + response.getRawResponse());
                                 }
                             }
                         });
