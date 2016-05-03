@@ -434,8 +434,8 @@ public class MainActivity extends Activity{
                 mediaRecorder.stop();  // stop the recording
                 releaseMediaRecorder(); // release the MediaRecorder object
                 //reset button text
+                record_button.setImageResource(R.drawable.record_button);
                 //record_button.setText(R.string.start_record_label);
-                // TODO: 4/30/16 change image to btn_stop_recording
                 toast("Video recorded");
 
                 lyricsVideo.stopPlayback();
@@ -452,6 +452,7 @@ public class MainActivity extends Activity{
 
                 mediaRecorder.start();
                 recording = true;
+                record_button.setImageResource(R.drawable.stop_button);
                 //record_button.setText(R.string.stop_record_label);
                 // TODO: 4/30/16 change image to btn_record_video
 
