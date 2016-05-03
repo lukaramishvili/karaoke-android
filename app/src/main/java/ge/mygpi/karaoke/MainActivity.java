@@ -27,8 +27,8 @@ import android.os.Environment;
 import android.os.FileObserver;
 import android.os.StatFs;
 import android.provider.MediaStore;
-import android.provider.Settings;
 import android.util.Log;
+import android.view.KeyEvent;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
 import android.view.View;
@@ -37,8 +37,8 @@ import android.widget.Button;
 import android.widget.FrameLayout;
 import android.widget.ImageButton;
 import android.widget.MediaController;
+import android.widget.RelativeLayout;
 import android.widget.Toast;
-import android.widget.VideoView;
 
 import com.facebook.AccessToken;
 import com.facebook.AccessTokenTracker;
@@ -83,8 +83,10 @@ public class MainActivity extends Activity{
     public ProgressDialog uploadProgress;
 
     ImageButton record_button;
-    ImageButton upload_button;
+    ImageButton browse_button;
     ImageButton flip_button;
+    ImageButton retake_button;
+    ImageButton upload_button;
     ImageButton gpi_logo;
     ImageButton mygpi_logo;
     SurfaceHolder surfaceHolder;
@@ -92,6 +94,8 @@ public class MainActivity extends Activity{
 
     CustomVideoView lyricsVideo;
     boolean fVideoLoaded = false;
+
+    CustomVideoView previewVideo;
 
     Long recordingId = (long) 0;
 
@@ -285,11 +289,17 @@ public class MainActivity extends Activity{
         record_button = (ImageButton)findViewById(R.id.record_button);
         record_button.setOnClickListener(recordButtonOnClickListener);
 
-        upload_button = (ImageButton)findViewById(R.id.upload_button);
-        upload_button.setOnClickListener(uploadButtonOnClickListener);
+        browse_button = (ImageButton)findViewById(R.id.browse_button);
+        browse_button.setOnClickListener(browseButtonOnClickListener);
 
         flip_button = (ImageButton)findViewById(R.id.flip_button);
         flip_button.setOnClickListener(flipButtonOnClickListener);
+
+        retake_button = (ImageButton)findViewById(R.id.retake_button);
+        retake_button.setOnClickListener(retakeButtonOnClickListener);
+
+        upload_button = (ImageButton)findViewById(R.id.upload_button);
+        upload_button.setOnClickListener(uploadButtonOnClickListener);
 
         gpi_logo = (ImageButton)findViewById(R.id.gpi_logo);
         gpi_logo.setOnClickListener(gpiLogoOnClickListener);
@@ -378,6 +388,12 @@ public class MainActivity extends Activity{
             @Override
             public void onPrepared(MediaPlayer mp) {
                 fVideoLoaded = true;
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        toast("Lyrics loaded. You can now record video.");
+                    }
+                });
             }
         });
         lyricsVideo.setVideoURI(Uri.parse("https://beluxhome.com/recordvideo/source.mp4"));
@@ -405,6 +421,9 @@ public class MainActivity extends Activity{
             }
 
             if(recording){
+
+                recording = false;
+
                 //first, set up monitoring file save; actual recorder stopping below
 
                 //wait for MediaRecorder finishing saving file
@@ -412,18 +431,14 @@ public class MainActivity extends Activity{
                     @Override
                     public void onEvent(int event, String path) {
                         if(path.equals((new File(getVideoSavePath(recordingId))).getName())) {
+                            //video save to disk finished callback
                             stopWatching();
-                            // TODO: 4/29/16 show video with play button in the middle
-                            // TODO: 4/29/16 also show two additional buttons: upload and retake
-                            // TODO: 4/29/16 only call the following upload code if user clicked upload
-                            //start upload code
-                            new Thread(new Runnable() {
+                            runOnUiThread(new Runnable() {
+                                @Override
                                 public void run() {
-                                    //this will also create and show the uploadProgress dialog
-                                    uploadVideoFromPath(getVideoSavePath(recordingId));
+                                    previewRecordedVideo();
                                 }
-                            }).start();
-                            //end upload code
+                            });
                         }
                     }
                 };
@@ -436,37 +451,31 @@ public class MainActivity extends Activity{
                 //reset button text
                 record_button.setImageResource(R.drawable.record_button);
                 //record_button.setText(R.string.start_record_label);
-                toast("Video recorded");
 
                 lyricsVideo.stopPlayback();
 
             } else {
 
-                //Release Camera before MediaRecorder start
-                releaseCamera();
-
-                if(!prepareMediaRecorder()){
-                    toast("Fail in prepareMediaRecorder()!\n - Ended -");
-                    finish();
-                }
-
-                mediaRecorder.start();
-                recording = true;
-                record_button.setImageResource(R.drawable.stop_button);
-                //record_button.setText(R.string.stop_record_label);
-                // TODO: 4/30/16 change image to btn_record_video
-
-                //play video simultaneously while recording
+                //wait for lyrics video to load and start
                 if(fVideoLoaded) {
                     lyricsVideo.setPlayPauseListener(new CustomVideoView.PlayPauseListener() {
-
                         @Override
                         public void onPlay() {
                             //play callback
-                            // TODO: 4/30/16 if the video loads too slow and doesn't match recording start,
-                            // TODO: 4/30/16 |->then move above recording start code here
-                        }
 
+                            //Release Camera before MediaRecorder start
+                            releaseCamera();
+
+                            if(!prepareMediaRecorder()){
+                                toast("Fail in prepareMediaRecorder()!\n - Ended -");
+                                finish();
+                            }
+
+                            mediaRecorder.start();
+                            recording = true;
+                            //record_button.setText(R.string.stop_record_label);
+                            record_button.setImageResource(R.drawable.stop_button);
+                        }
                         @Override
                         public void onPause() {
                             //paused callback
@@ -474,7 +483,7 @@ public class MainActivity extends Activity{
                     });
                     lyricsVideo.start();
                 } else {
-                    toast("Video not loaded yet");
+                    toast("Please wait for the lyrics to load.");
                 }
             }
         }};
@@ -490,7 +499,7 @@ public class MainActivity extends Activity{
         }
     };
 
-    Button.OnClickListener uploadButtonOnClickListener
+    Button.OnClickListener browseButtonOnClickListener
             = new Button.OnClickListener(){
         @Override
         public void onClick(View v) {
@@ -505,6 +514,23 @@ public class MainActivity extends Activity{
             intent.setType("video/*");
             intent.setAction(Intent.ACTION_GET_CONTENT);
             startActivityForResult(Intent.createChooser(intent,"Select Video"),REQUEST_TAKE_GALLERY_VIDEO);
+        }
+    };
+
+    Button.OnClickListener retakeButtonOnClickListener
+            = new Button.OnClickListener(){
+        @Override
+        public void onClick(View v) {
+            retakeVideo();
+        }
+    };
+
+    Button.OnClickListener uploadButtonOnClickListener
+            = new Button.OnClickListener(){
+        @Override
+        public void onClick(View v) {
+            //this will also create and show the uploadProgress dialog
+            uploadVideoFromPath(getVideoSavePath(recordingId));
         }
     };
 
@@ -523,6 +549,61 @@ public class MainActivity extends Activity{
             openUrl("https://mygpi.ge");
         }
     };
+
+    public void previewRecordedVideo(){
+        RelativeLayout mainContainer = (RelativeLayout)findViewById(R.id.mainContainer);
+        RelativeLayout previewContainer = (RelativeLayout)findViewById(R.id.previewContainer);
+        mainContainer.setVisibility(View.GONE);
+        previewContainer.setVisibility(View.VISIBLE);
+
+        //start setup video
+        previewVideo = (CustomVideoView) findViewById(R.id.previewVideo);
+        final MediaController previewControls = new MediaController(this){
+            @Override
+            public void hide() {
+                /* prevent hiding controls */
+            }
+            //retake video on back key
+            @Override
+            public boolean dispatchKeyEvent(KeyEvent event) {
+                if(event.getKeyCode() == KeyEvent.KEYCODE_BACK) {
+                    retakeVideo();
+                }
+                return true;
+            }
+        };
+        previewControls.setAnchorView(previewVideo);
+        previewControls.setMediaPlayer(previewVideo);
+        previewVideo.setMediaController(previewControls);
+        previewControls.requestFocus();
+        previewVideo.setOnPreparedListener(new MediaPlayer.OnPreparedListener() {
+            @Override
+            public void onPrepared(MediaPlayer mp) {
+                //video is ready to be played
+                previewVideo.setPlayPauseListener(new CustomVideoView.PlayPauseListener() {
+                    @Override
+                    public void onPlay() {
+                        //play started callback
+                    }
+                    @Override
+                    public void onPause() {
+                        //paused callback
+                    }
+                });
+                previewControls.show(2000000000);
+                mp.start();
+            }
+        });
+        previewVideo.setVideoPath(getVideoSavePath(recordingId));
+        //end setup video
+    }
+
+    public void retakeVideo(){
+        RelativeLayout mainContainer = (RelativeLayout)findViewById(R.id.mainContainer);
+        RelativeLayout previewContainer = (RelativeLayout)findViewById(R.id.previewContainer);
+        previewContainer.setVisibility(View.GONE);
+        mainContainer.setVisibility(View.VISIBLE);
+    }
 
     private Camera getCameraInstance(int cameraId){
         Camera c = null;
