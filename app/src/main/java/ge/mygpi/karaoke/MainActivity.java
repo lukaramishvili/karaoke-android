@@ -40,12 +40,16 @@ import android.widget.MediaController;
 import android.widget.Toast;
 import android.widget.VideoView;
 
+import com.facebook.AccessToken;
+import com.facebook.AccessTokenTracker;
 import com.facebook.CallbackManager;
 import com.facebook.FacebookCallback;
 import com.facebook.FacebookException;
 import com.facebook.FacebookSdk;
 import com.facebook.GraphRequest;
 import com.facebook.GraphResponse;
+import com.facebook.Profile;
+import com.facebook.ProfileTracker;
 import com.facebook.login.LoginResult;
 import com.facebook.login.widget.LoginButton;
 
@@ -57,8 +61,6 @@ import javax.net.ssl.HttpsURLConnection;
 public class MainActivity extends Activity{
     //doc: http://bit.ly/1QEum1E
 
-    CallbackManager callbackManager;
-
     private boolean onCreateCalled = false;
 
     private Camera myCamera;
@@ -69,6 +71,11 @@ public class MainActivity extends Activity{
     int REQUEST_TAKE_GALLERY_VIDEO = 101;
 
     private LoginButton loginButton;
+
+    CallbackManager callbackManager;
+    ProfileTracker profileTracker;
+    AccessTokenTracker accessTokenTracker;
+    AccessToken accessToken;
 
     boolean loggedIn = false;
     String UserId = "";
@@ -173,6 +180,76 @@ public class MainActivity extends Activity{
         }).start();
     }
 
+    private void facebookLoginCallback(final AccessToken argCurrentAccessToken){
+        if(argCurrentAccessToken == null){
+            return;
+        }
+        GraphRequest request = GraphRequest.newMeRequest(
+                argCurrentAccessToken,
+                new GraphRequest.GraphJSONObjectCallback() {
+                    @Override
+                    public void onCompleted(JSONObject object, GraphResponse response) {
+                        try {
+                            // Application code
+                            final String id = object.getString("id");
+                            final String name = object.getString("name");
+                            final String email = object.has("email")
+                                    ? object.getString("email")
+                                    : "no-email@example.com";
+                            final String avatar = object.getJSONObject("picture")
+                                    .getJSONObject("data")
+                                    .getString("url");
+                            final String cover = object.has("cover")
+                                    ?   object.getJSONObject("cover").getString("source")
+                                    : avatar;
+                            //start POST data to server
+                            new Thread(new Runnable() {
+                                public void run() {
+                                    try {
+                                        URL urlPostUserData = new URL("https://karaoke.mygpi.ge/Account/ExternalSignupDevice");
+                                        HttpsURLConnection connPostUserData = (HttpsURLConnection)urlPostUserData.openConnection();
+                                        connPostUserData.setRequestMethod("POST");
+                                        connPostUserData.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
+                                        connPostUserData.setDoOutput(true);
+                                        OutputStream wr = connPostUserData.getOutputStream();
+                                        String urlParameters = "id=" + id + "&name=" + name + "&email=" + email + "&avatar=" + avatar + "&cover=" + cover + "&accesstoken=" + argCurrentAccessToken.getToken();
+                                        wr.write(urlParameters.getBytes("UTF-8"));
+                                        connPostUserData.connect();
+                                        BufferedReader br = new BufferedReader(new InputStreamReader(connPostUserData.getInputStream()));
+                                        String input;
+                                        String response = "";
+                                        while ((input = br.readLine()) != null) {
+                                            response += input;
+                                        }
+                                        try {
+                                            JSONObject jsonResponse = new JSONObject(response);
+                                            MainActivity.this.loggedIn = true;
+                                            MainActivity.this.UserId = jsonResponse.getString("UserId");
+                                            runOnUiThread(new Runnable(){public void run(){toast("Logged in as " + name);}});
+                                        } catch(JSONException e){
+                                            runOnUiThread(new Runnable(){public void run(){toast("When authorizing, server returned malformed json.");}});
+                                        }
+                                        br.close();
+                                    } catch (MalformedURLException e) {
+                                        runOnUiThread(new Runnable(){public void run(){toast("Malformed url exception.");}});
+                                    } catch (IOException e) {
+                                        runOnUiThread(new Runnable(){public void run(){toast("sending i/o error. try again.");}});
+                                    }
+                                }
+                            }).start();
+                            //end POST data to server
+                        } catch (JSONException e) {
+                            toast("Incorrect answer from Facebook.");
+                            //showLinkedDialog("asd","asd","incor fb" + response.getRawResponse());
+                        }
+                    }
+                });
+        Bundle parameters = new Bundle();
+        parameters.putString("fields", "id,name,email,picture.type(large),cover");
+        request.setParameters(parameters);
+        request.executeAsync();
+    }
+
     @Override
     protected void onActivityResult(final int requestCode, final int resultCode, final Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
@@ -192,6 +269,13 @@ public class MainActivity extends Activity{
         } else {
             callbackManager.onActivityResult(requestCode, resultCode, data);
         }
+    }
+
+    @Override
+    public void onDestroy() {
+        super.onDestroy();
+        profileTracker.stopTracking();
+        accessTokenTracker.stopTracking();
     }
 
     public void initUIAndEvents(){
@@ -232,83 +316,52 @@ public class MainActivity extends Activity{
         initUIAndEvents();//contains setContentView and onClick handlers
 
         callbackManager = CallbackManager.Factory.create();
+
+        // we don't use this callback because we need additional details - email, cover, etc
+        profileTracker = new ProfileTracker() {
+            @Override
+            protected void onCurrentProfileChanged(
+                    Profile oldProfile,
+                    Profile currentProfile) {
+                if(currentProfile != null) {
+                    //logged in
+                    //currentProfile.getId(), getName(), getProfilePictureUri(256, 256)
+                } else {
+                    //logged out
+                }
+            }
+        };
+
+        //start accessTokenTracker code
+        accessTokenTracker = new AccessTokenTracker() {
+            @Override
+            protected void onCurrentAccessTokenChanged(
+                    AccessToken oldAccessToken,
+                    AccessToken currentAccessToken) {
+                // Set the access token using
+                // currentAccessToken when it's loaded or set.
+                accessToken = currentAccessToken;
+                facebookLoginCallback(accessToken);
+            }
+        };
+        // If the access token is available already assign it.
+        accessToken = AccessToken.getCurrentAccessToken();
+        facebookLoginCallback(accessToken);
+        //end accessTokenTracker code
+
         loginButton = (LoginButton)findViewById(R.id.login_button);
         loginButton.setReadPermissions(Arrays.asList(
                 "public_profile", "email", "user_friends"));
+        //IMPORTANT: not using this callback anymore because it only fires on physically clicking LoginButton
         loginButton.registerCallback(callbackManager, new FacebookCallback<LoginResult>() {
             @Override
             public void onSuccess(final LoginResult loginResult) {
                 //access token: loginResult.getAccessToken().getToken()
-                GraphRequest request = GraphRequest.newMeRequest(
-                        loginResult.getAccessToken(),
-                        new GraphRequest.GraphJSONObjectCallback() {
-                            @Override
-                            public void onCompleted(JSONObject object, GraphResponse response) {
-                                try {
-                                    // Application code
-                                    final String id = object.getString("id");
-                                    final String name = object.getString("name");
-                                    final String email = object.has("email")
-                                            ? object.getString("email")
-                                            : "no-email@example.com";
-                                    final String avatar = object.getJSONObject("picture")
-                                            .getJSONObject("data")
-                                            .getString("url");
-                                    final String cover = object.has("cover")
-                                            ?   object.getJSONObject("cover").getString("source")
-                                            : avatar;
-                                    //start POST data to server
-                                    new Thread(new Runnable() {
-                                        public void run() {
-                                            try {
-                                                URL urlPostUserData = new URL("https://karaoke.mygpi.ge/Account/ExternalSignupDevice");
-                                                HttpsURLConnection connPostUserData = (HttpsURLConnection)urlPostUserData.openConnection();
-                                                connPostUserData.setRequestMethod("POST");
-                                                connPostUserData.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
-                                                connPostUserData.setDoOutput(true);
-                                                OutputStream wr = connPostUserData.getOutputStream();
-                                                String urlParameters = "id=" + id + "&name=" + name + "&email=" + email + "&avatar=" + avatar + "&cover=" + cover + "&accesstoken=" + loginResult.getAccessToken().getToken();
-                                                wr.write(urlParameters.getBytes("UTF-8"));
-                                                connPostUserData.connect();
-                                                BufferedReader br = new BufferedReader(new InputStreamReader(connPostUserData.getInputStream()));
-                                                String input;
-                                                String response = "";
-                                                while ((input = br.readLine()) != null) {
-                                                    response += input;
-                                                }
-                                                try {
-                                                    JSONObject jsonResponse = new JSONObject(response);
-                                                    MainActivity.this.loggedIn = true;
-                                                    MainActivity.this.UserId = jsonResponse.getString("UserId");
-                                                } catch(JSONException e){
-                                                    runOnUiThread(new Runnable(){public void run(){toast("When authorizing, server returned malformed json.");}});
-                                                }
-                                                br.close();
-                                            } catch (MalformedURLException e) {
-                                                runOnUiThread(new Runnable(){public void run(){toast("Malformed url exception.");}});
-                                            } catch (IOException e) {
-                                                runOnUiThread(new Runnable(){public void run(){toast("sending i/o error. try again.");}});
-                                            }
-                                        }
-                                    }).start();
-                                    //end POST data to server
-                                } catch (JSONException e) {
-                                    toast("Incorrect answer from Facebook.");
-                                    //showLinkedDialog("asd","asd","incor fb" + response.getRawResponse());
-                                }
-                            }
-                        });
-                Bundle parameters = new Bundle();
-                parameters.putString("fields", "id,name,email,picture.type(large),cover");
-                request.setParameters(parameters);
-                request.executeAsync();
             }
-
             @Override
             public void onCancel() {
                 toast("Facebook Login was cancelled.");
             }
-
             @Override
             public void onError(FacebookException exception) {
                 toast("Facebook error: " + exception.getMessage());//also there's exception.getCause()
