@@ -394,6 +394,11 @@ public class MainActivity extends Activity{
         @Override
         public void onClick(View v) {
 
+            if(accessToken == null){
+                toast("Please log in before recording");
+                return;
+            }
+
             if(!fFreeSpaceIsEnough()) {
                 notifyNotEnoughFreeSpace();
                 return;
@@ -489,6 +494,12 @@ public class MainActivity extends Activity{
         @Override
         public void onClick(View v) {
             // TODO: 4/30/16 check login and then allow upload only if the user has no videos yet
+
+            if(accessToken == null){
+                toast("Please log in before uploading");
+                return;
+            }
+
             Intent intent = new Intent();
             intent.setType("video/*");
             intent.setAction(Intent.ACTION_GET_CONTENT);
