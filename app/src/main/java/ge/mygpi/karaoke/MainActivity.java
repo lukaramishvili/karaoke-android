@@ -200,10 +200,21 @@ public class MainActivity extends Activity{
                 FileUploader.uploadVideo(UserId, path, MainActivity.this, new UploadCallback() {
                     @Override
                     public void run() {
-                        String msg = "ვიდეო ატვირთულია.\n\n იხილეთ ატვირთული ვიდეო აქ: \n\n"
-                                + " https://karaoke.mygpi.ge/Video/" + this.serverResponseText;
-
-                        showLinkedDialog("ვიდეო ატვირთულია", "გამოსვლა", msg);
+                        Boolean serverSuccess = false;
+                        String serverMessage = "N/A";
+                        try {
+                            JSONObject jsonResult = new JSONObject(this.serverResponseText);
+                            if(jsonResult.getBoolean("Success")){
+                                String videoUrl = jsonResult.getString("Url");
+                                String msg = "ვიდეო ატვირთულია.\n\n იხილეთ ატვირთული ვიდეო აქ: \n\n"
+                                        + " https://karaoke.mygpi.ge" + videoUrl;
+                                showLinkedDialog("ვიდეო ატვირთულია", "გამოსვლა", msg);
+                            } else {
+                                toast("Server returned problem when saving video");
+                            }
+                        } catch (JSONException e){
+                            toast("Server error while uploading");
+                        }
                     }
                 });
             }

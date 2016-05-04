@@ -5,8 +5,8 @@ package ge.mygpi.karaoke;
  */
 public class UploadCallback implements Runnable {
 
-    int serverResponseCode = 0;
-    String serverResponseText = "";
+    public int serverResponseCode = 0;
+    public String serverResponseText = "";
 
     public void run(){
     }

@@ -4,9 +4,12 @@ import android.app.ProgressDialog;
 import android.util.Log;
 import android.widget.Toast;
 
+import java.io.BufferedReader;
 import java.io.DataOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.InputStreamReader;
+import java.io.OutputStream;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLEncoder;
@@ -19,7 +22,7 @@ import javax.net.ssl.HttpsURLConnection;
 public class FileUploader {
     //doc: http://bit.ly/1iCoElu
 
-    public static int uploadVideo(String UserId, String sourcePath, final MainActivity activity, Runnable successCallback) {
+    public static int uploadVideo(String UserId, String sourcePath, final MainActivity activity, UploadCallback successCallback) {
 
         activity.runOnUiThread(new Runnable() {
             public void run() {
@@ -114,12 +117,20 @@ public class FileUploader {
                 // Responses from the server (code and message)
                 serverResponseCode = conn.getResponseCode();
                 String serverResponseMessage = conn.getResponseMessage();
+                BufferedReader br = new BufferedReader(new InputStreamReader(conn.getInputStream()));
+                String line;
+                String serverResponseText = "";
+                while ((line = br.readLine()) != null) {
+                    serverResponseText += line;
+                }
 
                 Log.i("uploadFile", "HTTP Response is : "
                         + serverResponseMessage + ": " + serverResponseCode);
 
                 if (serverResponseCode == 200) {
 
+                    successCallback.serverResponseCode = serverResponseCode;
+                    successCallback.serverResponseText = serverResponseText;
                     activity.runOnUiThread(successCallback);
                 }
 
