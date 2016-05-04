@@ -498,7 +498,7 @@ public class MainActivity extends Activity{
                 record_button.setImageResource(R.drawable.record_button);
                 //record_button.setText(R.string.start_record_label);
 
-                lyricsVideo.stopPlayback();
+                lyricsVideo.pause();
 
             } else {
 
@@ -527,6 +527,7 @@ public class MainActivity extends Activity{
                             //paused callback
                         }
                     });
+                    lyricsVideo.seekTo(0);
                     lyricsVideo.start();
                 } else {
                     toast("Please wait for the lyrics to load.");
