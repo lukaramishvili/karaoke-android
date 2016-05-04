@@ -453,7 +453,7 @@ public class MainActivity extends Activity{
                 });
             }
         });
-        lyricsVideo.setVideoURI(Uri.parse("https://beluxhome.com/recordvideo/source.mp4"));
+        lyricsVideo.setVideoURI(Uri.parse("https://karaoke.mygpi.ge/source.mp4"));
         //end setup video
 
         prepareCamera();
