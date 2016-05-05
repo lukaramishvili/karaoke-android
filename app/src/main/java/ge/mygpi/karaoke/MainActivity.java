@@ -109,6 +109,8 @@ public class MainActivity extends Activity{
 
     Long recordingId = (long) 0;
 
+    Date lastRecordingStartTime;
+
     float nFreeSpaceAvailable = -1;
     static final String LOCATION_NA = "n/a";
     static final String LOCATION_INTERNAL = "internal";
@@ -479,37 +481,43 @@ public class MainActivity extends Activity{
 
             if(recording){
 
-                recording = false;
+                Date nowDate = new Date();
+                if(lastRecordingStartTime != null && Long.valueOf(nowDate.getTime() - lastRecordingStartTime.getTime()) > 3 * 1000) {
 
-                //first, set up monitoring file save; actual recorder stopping below
+                    recording = false;
 
-                //wait for MediaRecorder finishing saving file
-                FileObserver fo = new FileObserver(saveDir.getAbsolutePath(), FileObserver.CLOSE_WRITE){
-                    @Override
-                    public void onEvent(int event, String path) {
-                        if(path.equals((new File(getVideoSavePath(recordingId))).getName())) {
-                            //video save to disk finished callback
-                            stopWatching();
-                            runOnUiThread(new Runnable() {
-                                @Override
-                                public void run() {
-                                    previewRecordedVideo();
-                                }
-                            });
+                    //first, set up monitoring file save; actual recorder stopping below
+
+                    //wait for MediaRecorder finishing saving file
+                    FileObserver fo = new FileObserver(saveDir.getAbsolutePath(), FileObserver.CLOSE_WRITE) {
+                        @Override
+                        public void onEvent(int event, String path) {
+                            if (path.equals((new File(getVideoSavePath(recordingId))).getName())) {
+                                //video save to disk finished callback
+                                stopWatching();
+                                runOnUiThread(new Runnable() {
+                                    @Override
+                                    public void run() {
+                                        previewRecordedVideo();
+                                    }
+                                });
+                            }
                         }
-                    }
-                };
-                fo.startWatching();
+                    };
+                    fo.startWatching();
 
 
-                // stop recording and release camera
-                mediaRecorder.stop();  // stop the recording
-                releaseMediaRecorder(); // release the MediaRecorder object
-                //reset button text
-                record_button.setImageResource(R.drawable.record_button);
-                //record_button.setText(R.string.start_record_label);
+                    // stop recording and release camera
+                    mediaRecorder.stop();  // stop the recording
+                    releaseMediaRecorder(); // release the MediaRecorder object
+                    //reset button text
+                    record_button.setImageResource(R.drawable.record_button);
+                    //record_button.setText(R.string.start_record_label);
 
-                lyricsVideo.pause();
+                    lyricsVideo.pause();
+                } else {
+                    //don't allow stopping recording in the first three seconds - causes error
+                }
 
             } else {
 
@@ -532,6 +540,8 @@ public class MainActivity extends Activity{
                             recording = true;
                             //record_button.setText(R.string.stop_record_label);
                             record_button.setImageResource(R.drawable.stop_button);
+
+                            lastRecordingStartTime = new Date();
                         }
                         @Override
                         public void onPause() {

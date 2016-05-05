@@ -39,13 +39,20 @@
             android:theme="@style/FullscreenTheme" >
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
-
+                <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.LAUNCHER" />
+                <category android:name="android.intent.category.VIEW" />
+                <category android:name="android.intent.category.BROWSABLE" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="ge.mygpi.karaoke.APPRECORD"/>
+                <category android:name="android.intent.category.DEFAULT"/>
             </intent-filter>
             <!-- launch app when navigating to karaoke.mygpi.ge/apprecord -->
             <intent-filter>
-                <data
-                    android:host="karaoke.mygpi.ge" android:path="/apprecord" android:scheme="http" >
+                <data android:host="karaoke.mygpi.ge" android:path="/apprecord" android:scheme="http" >
+                </data>
+                <data android:host="karaoke.mygpi.ge" android:path="/apprecord" android:scheme="https" >
                 </data>
 
                 <action android:name="android.intent.action.VIEW" />
@@ -53,12 +60,15 @@
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
                 <category android:name="android.intent.category.LAUNCHER" />
+                <category android:name="android.intent.category.VIEW" />
             </intent-filter>
             <!-- launch app when navigating to karaokemygpi://apprecord/ -->
             <intent-filter>
                 <action android:name="android.intent.action.VIEW"/>
                 <category android:name="android.intent.category.DEFAULT"/>
                 <category android:name="android.intent.category.BROWSABLE"/>
+                <category android:name="android.intent.category.LAUNCHER" />
+                <category android:name="android.intent.category.VIEW" />
                 <data android:scheme="karaokemygpi" android:host="apprecord" android:path="/"/>
             </intent-filter>
         </activity>
