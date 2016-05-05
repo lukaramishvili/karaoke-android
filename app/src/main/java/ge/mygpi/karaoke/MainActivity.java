@@ -482,7 +482,7 @@ public class MainActivity extends Activity{
             if(recording){
 
                 Date nowDate = new Date();
-                if(lastRecordingStartTime != null && Long.valueOf(nowDate.getTime() - lastRecordingStartTime.getTime()) > 3 * 1000) {
+                if(lastRecordingStartTime != null && Long.valueOf(nowDate.getTime() - lastRecordingStartTime.getTime()) > 1 * 1000) {
 
                     recording = false;
 
