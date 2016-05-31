@@ -8,7 +8,9 @@ import java.io.OutputStream;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.Arrays;
+import java.util.Calendar;
 import java.util.Date;
+import java.util.GregorianCalendar;
 import java.util.Iterator;
 import java.util.List;
 
@@ -149,6 +151,24 @@ public class MainActivity extends Activity{
     }
     private boolean fFreeSpaceIsEnough(){
         return nFreeSpaceAvailable > 50*000*000;
+    }
+
+    private int getLyricsVideoNumber(){
+        //start detect video depending on day
+        Calendar firstDay = new GregorianCalendar(2016, 4/*Jan=0,4=May*/, 31, 0, 0, 0);
+        firstDay.set(Calendar.HOUR_OF_DAY, 0);
+        firstDay.set(Calendar.MINUTE, 0);
+        firstDay.set(Calendar.SECOND, 0);
+        firstDay.set(Calendar.MILLISECOND, 0);
+        Calendar today = new GregorianCalendar();
+        today.set(Calendar.HOUR_OF_DAY, 0);
+        today.set(Calendar.MINUTE, 0);
+        today.set(Calendar.SECOND, 0);
+        today.set(Calendar.MILLISECOND, 0);
+        long diffMillis = today.getTime().getTime() - firstDay.getTime().getTime();
+        int diffDays = (int) (diffMillis / (1000*60*60*24));
+        //end detect video depending on day
+        return (diffDays % 3) + 1;
     }
 
     private void prepareCamera() {
@@ -455,7 +475,8 @@ public class MainActivity extends Activity{
                 });
             }
         });
-        lyricsVideo.setVideoURI(Uri.parse("https://karaoke.mygpi.ge/source.mp4"));
+        //lyricsVideo.setVideoURI(Uri.parse("https://karaoke.mygpi.ge/source.mp4"));
+        lyricsVideo.setVideoURI(Uri.parse("http://karaoke.mygpi.ge/gpivideos/" + Integer.valueOf(getLyricsVideoNumber()).toString() + ".mp4"));
         //end setup video
 
         prepareCamera();
